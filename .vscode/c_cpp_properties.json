@@ -7,18 +7,15 @@
       "compilerArgs": [],
       "intelliSenseMode": "windows-gcc-x64",
       "includePath": [
-        "${workspaceFolder}/**"
+        "${workspaceFolder}/**",
+        "E:\\Users\\Public\\Code Files\\Code\\arduino-nightly\\libraries"
       ],
       "forcedInclude": [],
       "cStandard": "${default}",
       "cppStandard": "${default}",
-      "defines": [
-        "_DEBUG",
-        "UNICODE",
-        "_UNICODE",
-        "USBCON"
-      ]
+      "defines": ["_DEBUG", "UNICODE", "_UNICODE", "USBCON"]
     },
+
     {
       "name": "Arduino",
       "compilerPath": "C:\\Users\\admin\\AppData\\Local\\Arduino15\\packages\\arduino\\tools\\avr-gcc\\7.3.0-atmel3.6.1-arduino7\\bin\\avr-g++",
@@ -34,6 +31,7 @@
       ],
       "intelliSenseMode": "gcc-x64",
       "includePath": [
+        "E:\\Users\\Public\\Code Files\\Code\\arduino-nightly\\libraries",
         "C:\\Users\\admin\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\avr\\1.8.6\\cores\\arduino",
         "C:\\Users\\admin\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\avr\\1.8.6\\variants\\eightanaloginputs",
         "c:\\users\\admin\\appdata\\local\\arduino15\\packages\\arduino\\tools\\avr-gcc\\7.3.0-atmel3.6.1-arduino7\\lib\\gcc\\avr\\7.3.0\\include",
