@@ -1,0 +1,34 @@
+tft.setBacklight(boolean) // switch blacklight
+tft.setBacklightBrightness(i) // set blacklight brightness between 0 - 255
+tft.setDisplay(boolean) // display on or off
+tft.drawRectangle(x,y,x2,y2,color) // draw rectangle
+tft.fillRectangle(x,y,x2,y2,color) // draw a filled rectangle
+tft.drawText(x,y,text,color) // write text with (x,y) is the bottom left position of the text
+tft.setBackgroundColor(color); // set the background for the text
+tft.fill(color) // set the LCD's background
+tft.goToXY(x,y) // change the position of the cursor
+tft.setFont(font) // set text font
+tft.setColor(R,G,B) // RGB color 
+tft.setOrientation(i) // i : 0=portrait, 1=right rotated landscape, 2=reverse portrait, 3=left rotated landscape
+tft.drawPixel(x,y,color) // draw a single pixel at (x,y)
+tft.drawLine(x1,y1,x2,y2,color) // draw a line start from (x1,y1) to (x2,y2)
+tft.drawCircle(x,y,R,color) // draw a circle 
+tft.fillCircle(x,y,R,color) // draw a filled circle
+tft.drawTriangle(x1,y1,x2,y2,x3,y3,color) // draw a triangle
+tft.fillTriangle(x1,y1,x2,y2,x3,y3,color) // draw a filled triangle
+
+
+// How to present image on LCD
+static const uint8_t PROGMEM ImageName[] = 
+{
+    // image bitmap code
+};
+tft.drawBitmap(x, y, ImageName, width, height, color) 
+
+
+// Some sample of text font
+Font Name	Width (pixels)	Height (pixels)	Offset (start char)	Number of chars
+Terminal6x8	        6	            8  	            32	                96
+Terminal11x16	    11	            16 	            32	                96
+Terminal12x16	    12	            16	            32	                96
+Trebuchet_MS16x21	16	            21	            46	                13
