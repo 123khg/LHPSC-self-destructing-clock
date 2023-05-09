@@ -1,3 +1,4 @@
+// drawing funcition
 tft.setBacklight(boolean) // switch blacklight
 tft.setBacklightBrightness(i) // set blacklight brightness between 0 - 255
 tft.setDisplay(boolean) // display on or off
@@ -32,3 +33,18 @@ Terminal6x8	        6	            8  	            32	                96
 Terminal11x16	    11	            16 	            32	                96
 Terminal12x16	    12	            16	            32	                96
 Trebuchet_MS16x21	16	            21	            46	                13
+
+// Other fucntion
+millis() // Get the millis since the Arduino program started
+pinMOD(Pin_Number, type) // type: OUTPUT / INPUT
+digitalWrite(Pin_Number, type) // type : LOW / HIGH 
+digitalRead(Pin_Number) // Return the type of the Pin
+analogWrite(Pin_Number, value) // value 0 - 255
+analogRead(Pin_Number) // return value from 0 - 1023
+attachInterrupt(digitalPinToInterrupt(BUTTON_PIN), FunctionName, Type) 
+Type: 
+- RISING: Interrupt will be triggered when the signal goes from LOW to HIGH
+- FALLING: Interrupt will be triggered when the signal goes from HIGH to LOW
+- CHANGE: Interrupt will be triggered when the signal changes (LOW to HIGH or HIGH to LOW)
+- LOW: Interrupt will be triggered whenever the signal is LOW
+// Note in an interrupt function if you want to change a value of a varible use "volatile" before declare it
