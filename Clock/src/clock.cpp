@@ -34,8 +34,8 @@
 #define TFT_CLK 13
 #define RIGHT_BUTTON 2
 #define LEFT_BUTTON 3
-#define UP_BUTTON 5
-#define DOWN_BUTTON 12
+#define UP_BUTTON 12
+#define DOWN_BUTTON 5
 
 #endif
 
@@ -47,6 +47,44 @@ unsigned long time, secondChange, minuteChange, hourChange, timeChange, timeChan
 String second, minute, hour, lastMinute;
 boolean inChange = false, check = false;
 RtcDateTime now;
+
+void UP_PRESS()
+{
+    if (inChange)
+    {
+        if (changing == 0)
+            hourChange = min(24, hourChange + 1);
+        else if (changing == 1)
+            minuteChange = min(60, minuteChange + 1);
+        else
+            secondChange = min(60, secondChange + 1);
+    }
+}
+
+void DOWN_PRESS()
+{
+    if (inChange)
+    {
+        if (changing == 0)
+            hourChange = max(0, hourChange - 1);
+        else if (changing == 1)
+            minuteChange = max(0, minuteChange - 1);
+        else
+            secondChange = max(0, secondChange - 1);
+    }
+}
+
+void LEFT_PRESS()
+{
+    changing = max(0, changing - 1);
+    tft.clear();
+}
+
+void RIGHT_PRESS()
+{
+    changing = min(2, changing + 1);
+    tft.clear();
+}
 
 void GetDate()
 {
@@ -135,42 +173,4 @@ void loop()
         else
             tft.drawText(TimeX, TimeY, setTime(String(hourChange), 5) + ":" + setTime(String(minuteChange), 5) + ":" + setTime(String(secondChange), 5), COLOR_RED);
     }
-}
-
-void UP_PRESS()
-{
-    if (inChange)
-    {
-        if (changing == 0)
-            hourChange = min(24, hourChange + 1);
-        else if (changing == 1)
-            minuteChange = min(60, minuteChange + 1);
-        else
-            secondChange = min(60, secondChange + 1);
-    }
-}
-
-void DOWN_PRESS()
-{
-    if (inChange)
-    {
-        if (changing == 0)
-            hourChange = max(0, hourChange - 1);
-        else if (changing == 1)
-            minuteChange = max(0, minuteChange - 1);
-        else
-            secondChange = max(0, secondChange - 1);
-    }
-}
-
-void LEFT_PRESS()
-{
-    changing = max(0, changing - 1);
-    tft.clear();
-}
-
-void RIGHT_PRESS()
-{
-    changing = min(2, changing + 1);
-    tft.clear();
 }
