@@ -43,7 +43,7 @@
 TFT_22_ILI9225 tft = TFT_22_ILI9225(TFT_RST, TFT_RS, TFT_CS, TFT_CLK, TFT_BRIGHTNESS);
 ThreeWire myWire(7, 6, 4);
 RtcDS1302<ThreeWire> Rtc(myWire);
-unsigned long time, secondChange, minuteChange, hourChange, timeChange, timeChangePress, changing, TimeX, TimeY, ;
+unsigned long time, secondChange, minuteChange, hourChange, timeChange, timeChangePress, changing, TimeX, TimeY;
 String second, minute, hour, lastMinute;
 boolean inChange = false, check = false;
 RtcDateTime now;
