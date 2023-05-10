@@ -1,8 +1,0 @@
-{
-    "port": "COM7",
-    "configuration": "cpu=atmega328old",
-    "board": "arduino:avr:nano",
-    "programmer": "avrispmkii",
-    "sketch": "clock\\clock.ino",
-    "output": "../ArduinoOutput"
-}
