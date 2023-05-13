@@ -36,6 +36,7 @@
 #define LEFT_BUTTON 3
 #define UP_BUTTON 12
 #define DOWN_BUTTON 5
+#define CHANGE_BUTTON 1
 
 #endif
 
@@ -43,9 +44,10 @@
 TFT_22_ILI9225 tft = TFT_22_ILI9225(TFT_RST, TFT_RS, TFT_CS, TFT_CLK, TFT_BRIGHTNESS);
 ThreeWire myWire(7, 6, 4);
 RtcDS1302<ThreeWire> Rtc(myWire);
-unsigned long time, secondChange, minuteChange, hourChange, timeChange, timeChangePress, changing, TimeX, TimeY;
-String second, minute, hour, lastMinute;
-boolean inChange = false, check = false;
+unsigned long time, secondChange, minuteChange, hourChange, timeChange, timeChangePress, changing;
+unsigned long realTimeX, realTimeY, alarmX, alarmY, monthX, monthY;
+String second, minute, hour, lastMinute, MONTH[12] = {"JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"};
+boolean inChange = false, check = false, DOWN = true, UP = true, LEFT = true, RIGHT = true, CHANGEE = true;
 RtcDateTime now;
 
 void UP_PRESS()
@@ -107,6 +109,74 @@ String setTime(String a, int n)
         return '0' + a;
     return a;
 }
+
+void check_button()
+{
+    if (digitalRead(CHANGE_BUTTON) == HIGH && CHANGEE)
+        CHANGEE = false, inChange = !inChange;
+    else
+        CHANGEE = true;
+
+    if (digitalRead(DOWN_BUTTON) == HIGH && DOWN)
+        DOWN = false, DOWN_PRESS();
+    else
+        DOWN = true;
+
+    if (digitalRead(UP_BUTTON) == HIGH && UP)
+        UP = false, UP_PRESS();
+    else
+        UP = true;
+
+    if (digitalRead(RIGHT_BUTTON) == HIGH && RIGHT)
+        RIGHT = false, RIGHT_PRESS();
+    else
+        RIGHT = true;
+
+    if (digitalRead(LEFT_BUTTON) == HIGH && LEFT)
+        LEFT = false, LEFT_PRESS();
+    else
+        LEFT = true;
+}
+
+void screen_display()
+{
+    tft.setBackgroundColor(COLOR_BLACK);
+    tft.drawLine(0, 88, 220, 88, COLOR_WHITE);
+}
+
+void write_text()
+{
+    if (inChange == false)
+    {
+        tft.setFont(Trebuchet_MS16x21);
+        tft.drawText(realTimeX, realTimeY, hour + ":" + minute + ":" + second, COLOR_RED);
+        tft.setFont(Terminal11x16);
+        tft.drawText(monthX, monthY, MONTH[int(now.Month()) - 1]);
+    }
+    else
+    {
+        if (time - timeChange >= 1000)
+        {
+            tft.drawText(realTimeX, realTimeY, setTime(String(hourChange), 0) + ":" + setTime(String(minuteChange), 1) + ":" + setTime(String(secondChange), 2), COLOR_RED);
+        }
+        if (time - timeChange >= 1500)
+            timeChange = time;
+        else
+            tft.drawText(realTimeX, realTimeY, setTime(String(hourChange), 5) + ":" + setTime(String(minuteChange), 5) + ":" + setTime(String(secondChange), 5), COLOR_RED);
+    }
+}
+
+void update_time()
+{
+    time = millis();
+    now = Rtc.GetDateTime();
+    GetDate();
+    if (minute != lastMinute && !inChange)
+    {
+        lastMinute = minute;
+    }
+}
+
 void setup()
 {
     tft.begin();
@@ -121,56 +191,31 @@ void setup()
     GetDate();
     lastMinute = minute;
     secondChange = minuteChange = hourChange = 0;
-    TimeX = 50;
-    TimeY = 40;
-
-    attachInterrupt(digitalPinToInterrupt(UP_BUTTON), UP_PRESS, RISING);
-    attachInterrupt(digitalPinToInterrupt(LEFT_BUTTON), LEFT_PRESS, RISING);
-    attachInterrupt(digitalPinToInterrupt(RIGHT_BUTTON), RIGHT_PRESS, RISING);
-    attachInterrupt(digitalPinToInterrupt(DOWN_BUTTON), DOWN_PRESS, RISING);
+    monthX = 160;
+    monthY = 10;
+    realTimeX = 10;
+    realTimeY = 10;
+    alarmX = 10;
+    alarmY = 124;
+    pinMode(UP_BUTTON, INPUT);
+    pinMode(DOWN_BUTTON, INPUT);
+    pinMode(LEFT_BUTTON, INPUT);
+    pinMode(RIGHT_BUTTON, INPUT);
+    pinMode(CHANGE_BUTTON, INPUT);
 }
+
 void loop()
 {
-    // tft.drawBitmap(0, 0, tux, 220, 180, COLOR_WHITE);
-
     // Time & Date
-    time = millis();
-    GetDate();
-    if (minute != lastMinute)
-    {
-        tft.clear();
-        lastMinute = minute;
-    }
+    update_time();
 
     // Button
-    if (digitalRead(UP_BUTTON) && time - timeChangePress >= 3000)
-    {
-        inChange = !inChange;
-    }
-    else
-    {
-        timeChangePress = time;
-    }
+    check_button();
 
     // Screen
-    tft.setBackgroundColor(COLOR_BLACK);
-
-    now = Rtc.GetDateTime();
-    tft.setFont(Trebuchet_MS16x21);
+    // screen_display();
 
     // Write text
-    if (inChange == false)
-        tft.drawText(TimeX, TimeY, hour + ":" + minute + ":" + second, COLOR_RED);
-    else
-    {
-        if (time - timeChange >= 1000)
-        {
-            tft.clear();
-            tft.drawText(TimeX, TimeY, setTime(String(hourChange), 0) + ":" + setTime(String(minuteChange), 1) + ":" + setTime(String(secondChange), 2), COLOR_RED);
-        }
-        if (time - timeChange >= 1500)
-            timeChange = time;
-        else
-            tft.drawText(TimeX, TimeY, setTime(String(hourChange), 5) + ":" + setTime(String(minuteChange), 5) + ":" + setTime(String(secondChange), 5), COLOR_RED);
-    }
+    tft.clear();
+    write_text();
 }
