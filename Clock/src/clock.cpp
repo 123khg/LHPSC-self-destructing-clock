@@ -32,26 +32,38 @@
 #define TFT_CS 10
 #define TFT_SDI 11
 #define TFT_CLK 13
-#define RIGHT_BUTTON 2
-#define LEFT_BUTTON 3
-#define UP_BUTTON 12
-#define DOWN_BUTTON 5
-#define CHANGE_BUTTON 1
-
+#define RIGHT_BUTTON 17
+#define LEFT_BUTTON 16
+#define UP_BUTTON 14
+#define DOWN_BUTTON 15
+#define CHANGE_BUTTON 18
+#define SPEAKER 3
 #endif
 
-#define TFT_BRIGHTNESS 200
+#define TFT_BRIGHTNESS 100
+
+// hardware var
 TFT_22_ILI9225 tft = TFT_22_ILI9225(TFT_RST, TFT_RS, TFT_CS, TFT_CLK, TFT_BRIGHTNESS);
 ThreeWire myWire(7, 6, 4);
 RtcDS1302<ThreeWire> Rtc(myWire);
-unsigned long time, secondChange, minuteChange, hourChange, timeChange, timeChangePress, changing;
-unsigned long realTimeX, realTimeY, alarmX, alarmY, monthX, monthY;
-String second, minute, hour, lastMinute, MONTH[12] = {"JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"};
-boolean inChange = false, check = false, DOWN = true, UP = true, LEFT = true, RIGHT = true, CHANGEE = true;
 RtcDateTime now;
+
+// pos var
+String MONTH[12] = {"JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"};
+
+// time var
+unsigned long time, secondChange, minuteChange, hourChange, timeChange, changing;
+unsigned long minuteChanging, secondChanging, hourChanging;
+unsigned long DownButtonReady, UpButtonReady, LeftButtonReady, RightButtonReady, ChangeButtonReady;
+String second, minute, hour, lastSecond;
+
+// other var
+boolean inChange = false, check = false;
+boolean alarmOn = false;
 
 void UP_PRESS()
 {
+    Serial.println("UP BUTTON PRESSES");
     if (inChange)
     {
         if (changing == 0)
@@ -65,6 +77,7 @@ void UP_PRESS()
 
 void DOWN_PRESS()
 {
+    Serial.println("DOWN BUTTON PRESSES");
     if (inChange)
     {
         if (changing == 0)
@@ -78,14 +91,16 @@ void DOWN_PRESS()
 
 void LEFT_PRESS()
 {
+    Serial.println("LEFT BUTTON PRESSES");
     changing = max(0, changing - 1);
-    tft.clear();
+    // tft.clear();
 }
 
 void RIGHT_PRESS()
 {
+    Serial.println("RIGHT BUTTON PRESSES");
     changing = min(2, changing + 1);
-    tft.clear();
+    // tft.clear();
 }
 
 void GetDate()
@@ -93,76 +108,98 @@ void GetDate()
     second = String(now.Second());
     minute = String(now.Minute());
     hour = String(now.Hour());
-    if (String(now.Hour()).length() == 1)
+    if (hour.length() == 1)
         hour = '0' + hour;
-    if (String(now.Minute()).length() == 1)
+    if (minute.length() == 1)
         minute = '0' + minute;
-    if (String(now.Second()).length() == 1)
+    if (second.length() == 1)
         second = '0' + second;
 }
 
-String setTime(String a, int n)
+String setTime(int a)
 {
-    if (n == changing)
-        return "--";
-    if (a.length() == 1)
-        return '0' + a;
-    return a;
+    String tmp = String(a);
+    if (tmp.length() == 1)
+        return '0' + tmp;
+    return tmp;
 }
 
 void check_button()
 {
-    if (digitalRead(CHANGE_BUTTON) == HIGH && CHANGEE)
-        CHANGEE = false, inChange = !inChange;
+    if (analogRead(CHANGE_BUTTON) <= 2 && analogRead(CHANGE_BUTTON) != 0)
+    {
+        if (analogRead(CHANGE_BUTTON) <= 2 && analogRead(CHANGE_BUTTON) != 0 && time - ChangeButtonReady >= 20)
+            ChangeButtonReady = false, inChange = !inChange, Serial.println("CHANGE BUTTON PRESSES"), ChangeButtonReady = time;
+    }
+    else if (analogRead(DOWN_BUTTON) <= 2 && analogRead(DOWN_BUTTON) != 0)
+    {
+        if (analogRead(DOWN_BUTTON) <= 2 && analogRead(DOWN_BUTTON) != 0 && time - DownButtonReady >= 20)
+            DownButtonReady = false, DOWN_PRESS(), DownButtonReady = time;
+    }
+    else if (analogRead(UP_BUTTON) <= 2 && analogRead(UP_BUTTON) != 0)
+    {
+        if (analogRead(UP_BUTTON) <= 2 && analogRead(UP_BUTTON) != 0 && UpButtonReady)
+            UpButtonReady = false, UP_PRESS(), UpButtonReady = time;
+    }
+    else if (analogRead(RIGHT_BUTTON) <= 2 && analogRead(RIGHT_BUTTON) != 0)
+    {
+        if (analogRead(RIGHT_BUTTON) <= 2 && analogRead(RIGHT_BUTTON) != 0 && time - RightButtonReady >= 20)
+            RightButtonReady = false, RIGHT_PRESS(), RightButtonReady = time;
+    }
+    else if (analogRead(LEFT_BUTTON) <= 2 && analogRead(LEFT_BUTTON) != 0)
+    {
+        if (analogRead(LEFT_BUTTON) <= 2 && analogRead(LEFT_BUTTON) != 0 && time - LeftButtonReady >= 20)
+            LeftButtonReady = false, LEFT_PRESS(), LeftButtonReady = time;
+    }
     else
-        CHANGEE = true;
-
-    if (digitalRead(DOWN_BUTTON) == HIGH && DOWN)
-        DOWN = false, DOWN_PRESS();
-    else
-        DOWN = true;
-
-    if (digitalRead(UP_BUTTON) == HIGH && UP)
-        UP = false, UP_PRESS();
-    else
-        UP = true;
-
-    if (digitalRead(RIGHT_BUTTON) == HIGH && RIGHT)
-        RIGHT = false, RIGHT_PRESS();
-    else
-        RIGHT = true;
-
-    if (digitalRead(LEFT_BUTTON) == HIGH && LEFT)
-        LEFT = false, LEFT_PRESS();
-    else
-        LEFT = true;
+        LeftButtonReady = RightButtonReady = ChangeButtonReady = UpButtonReady = DownButtonReady = time;
 }
 
 void screen_display()
 {
-    tft.setBackgroundColor(COLOR_BLACK);
-    tft.drawLine(0, 88, 220, 88, COLOR_WHITE);
+    tft.drawLine(0, 90, 176, 90, COLOR_WHITE);
 }
 
 void write_text()
 {
-    if (inChange == false)
+    tft.setBackgroundColor(COLOR_BLACK);
+    tft.setFont(Trebuchet_MS16x21);
+    tft.drawText(25, 5, hour, COLOR_WHITE);
+    tft.drawText(60, 5, ":", COLOR_WHITE);
+    tft.drawText(70, 5, minute, COLOR_WHITE);
+    tft.drawText(105, 5, ":", COLOR_WHITE);
+    tft.drawText(115, 5, second, COLOR_WHITE);
+    tft.setFont(Terminal11x16);
+    tft.drawText(65, 50, MONTH[int(now.Month()) - 1]);
+    tft.drawText(23, 50, String(now.Day()));
+    tft.drawText(115, 50, String(now.Year()));
+
+    tft.setFont(Terminal11x16);
+    tft.drawText(10, 100, "Detontating in: ", COLOR_WHITE);
+    if (!inChange)
     {
         tft.setFont(Trebuchet_MS16x21);
-        tft.drawText(realTimeX, realTimeY, hour + ":" + minute + ":" + second, COLOR_RED);
+        tft.drawText(15, 140, setTime(hourChange), COLOR_WHITE);
+        tft.drawText(50, 140, ":", COLOR_WHITE);
+        tft.drawText(60, 140, setTime(minuteChange), COLOR_WHITE);
+        tft.drawText(95, 140, ":", COLOR_WHITE);
+        tft.drawText(105, 140, setTime(secondChange), COLOR_WHITE);
+        // Serial.println(setTime(hourChange) + ":" + setTime(minuteChange) + ":" + setTime(secondChange));
         tft.setFont(Terminal11x16);
-        tft.drawText(monthX, monthY, MONTH[int(now.Month()) - 1]);
-    }
-    else
-    {
-        if (time - timeChange >= 1000)
+        if (alarmOn)
         {
-            tft.drawText(realTimeX, realTimeY, setTime(String(hourChange), 0) + ":" + setTime(String(minuteChange), 1) + ":" + setTime(String(secondChange), 2), COLOR_RED);
+            // tft.fillRectangle(130, 135, 160, 160, COLOR_GREEN);
+            tft.setBackgroundColor(COLOR_GREEN);
+            tft.drawText(140, 130, "ON", COLOR_WHITE);
         }
-        if (time - timeChange >= 1500)
-            timeChange = time;
         else
-            tft.drawText(realTimeX, realTimeY, setTime(String(hourChange), 5) + ":" + setTime(String(minuteChange), 5) + ":" + setTime(String(secondChange), 5), COLOR_RED);
+        {
+            // tft.fillRectangle(130, 135, 160, 160, COLOR_RED);
+            tft.setBackgroundColor(COLOR_RED);
+            tft.drawText(140, 130, "OFF", COLOR_WHITE);
+        }
+        tft.setBackgroundColor(COLOR_CYAN);
+        tft.drawText(140, 150, "SET", COLOR_WHITE);
     }
 }
 
@@ -171,9 +208,16 @@ void update_time()
     time = millis();
     now = Rtc.GetDateTime();
     GetDate();
-    if (minute != lastMinute && !inChange)
+    if (second != lastSecond)
     {
-        lastMinute = minute;
+        lastSecond = second;
+        tft.fillRectangle(115, 5, 176, 25, COLOR_BLACK);
+        if (second == "1")
+        {
+            tft.fillRectangle(70, 5, 104, 25, COLOR_BLACK);
+            if (minute == "1")
+                tft.fillRectangle(25, 5, 59, 25, COLOR_BLACK);
+        }
     }
 }
 
@@ -181,7 +225,7 @@ void setup()
 {
     tft.begin();
     tft.clear();
-    tft.setOrientation(3);
+    tft.setOrientation(0);
     Serial.begin(9600);
     pinMode(LED_BUILTIN, OUTPUT);
 
@@ -189,14 +233,8 @@ void setup()
     RtcDateTime currentTime = RtcDateTime(__DATE__, __TIME__);
     Rtc.SetDateTime(currentTime);
     GetDate();
-    lastMinute = minute;
-    secondChange = minuteChange = hourChange = 0;
-    monthX = 160;
-    monthY = 10;
-    realTimeX = 10;
-    realTimeY = 10;
-    alarmX = 10;
-    alarmY = 124;
+    lastSecond = second;
+    inChange = secondChange = minuteChange = hourChange = 0;
     pinMode(UP_BUTTON, INPUT);
     pinMode(DOWN_BUTTON, INPUT);
     pinMode(LEFT_BUTTON, INPUT);
@@ -208,14 +246,12 @@ void loop()
 {
     // Time & Date
     update_time();
-
     // Button
     check_button();
 
     // Screen
-    // screen_display();
+    screen_display();
 
     // Write text
-    tft.clear();
     write_text();
 }
