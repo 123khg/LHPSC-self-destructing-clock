@@ -52,7 +52,8 @@ RtcDateTime now;
 String MONTH[12] = {"JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"};
 
 // time var
-unsigned long time, secondChange, minuteChange, hourChange, timeChange, changing;
+unsigned long time, alarm[6] = {0, 0, 0, 0, 0, 0}, changing;
+unsigned long alarmSet[6] = {0, 0, 0, 0, 0, 0};
 unsigned long minuteChanging, secondChanging, hourChanging;
 unsigned long DownButtonReady, UpButtonReady, LeftButtonReady, RightButtonReady, ChangeButtonReady;
 String second, minute, hour, lastSecond;
@@ -60,18 +61,26 @@ String second, minute, hour, lastSecond;
 // other var
 boolean inChange = false, check = false;
 boolean alarmOn = false;
+unsigned long ButtonType = -1, timeAfterPressed[5];
 
 void UP_PRESS()
 {
     Serial.println("UP BUTTON PRESSES");
     if (inChange)
     {
-        if (changing == 0)
-            hourChange = min(24, hourChange + 1);
-        else if (changing == 1)
-            minuteChange = min(60, minuteChange + 1);
+        if (changing == 3 || changing == 5)
+            alarm[changing] = (alarm[changing] + 1) % 10;
+        else if (changing == 2 || changing == 4)
+            alarm[changing] = (alarm[changing] + 1) % 6;
+        else if (changing == 0)
+            alarm[changing] = (alarm[changing] + 1) % 3;
         else
-            secondChange = min(60, secondChange + 1);
+        {
+            if (alarm[0] == 2)
+                alarm[changing] = (alarm[changing] + 1) % 5;
+            else
+                alarm[changing] = (alarm[changing] + 1) % 10;
+        }
     }
 }
 
@@ -80,12 +89,19 @@ void DOWN_PRESS()
     Serial.println("DOWN BUTTON PRESSES");
     if (inChange)
     {
-        if (changing == 0)
-            hourChange = max(0, hourChange - 1);
-        else if (changing == 1)
-            minuteChange = max(0, minuteChange - 1);
+        if (changing == 3 || changing == 5)
+            (alarm[changing] - 1 >= 0) ? alarm[changing]-- : alarm[changing] = 9;
+        else if (changing == 2 || changing == 4)
+            (alarm[changing] - 1 >= 0) ? alarm[changing]-- : alarm[changing] = 5;
+        else if (changing == 0)
+            (alarm[changing] - 1 >= 0) ? alarm[changing]-- : alarm[changing] = 2;
         else
-            secondChange = max(0, secondChange - 1);
+        {
+            if (alarm[0] == 2)
+                (alarm[changing] - 1 >= 0) ? alarm[changing]-- : alarm[changing] = 4;
+            else
+                (alarm[changing] - 1 >= 0) ? alarm[changing]-- : alarm[changing] = 9;
+        }
     }
 }
 
@@ -99,8 +115,14 @@ void LEFT_PRESS()
 void RIGHT_PRESS()
 {
     Serial.println("RIGHT BUTTON PRESSES");
-    changing = min(2, changing + 1);
+    changing = min(5, changing + 1);
     // tft.clear();
+}
+
+void CHANGE_PRESS()
+{
+    Serial.println("CHANGE BUTTON PRESSES");
+    inChange = !inChange;
 }
 
 void GetDate()
@@ -116,43 +138,42 @@ void GetDate()
         second = '0' + second;
 }
 
-String setTime(int a)
-{
-    String tmp = String(a);
-    if (tmp.length() == 1)
-        return '0' + tmp;
-    return tmp;
-}
-
 void check_button()
 {
-    if (analogRead(CHANGE_BUTTON) <= 2 && analogRead(CHANGE_BUTTON) != 0)
+    unsigned long readButton[5];
+    readButton[0] = analogRead(CHANGE_BUTTON);
+    readButton[1] = analogRead(DOWN_BUTTON);
+    readButton[2] = analogRead(UP_BUTTON);
+    readButton[3] = analogRead(LEFT_BUTTON);
+    readButton[4] = analogRead(RIGHT_BUTTON);
+    String output = String(timeAfterPressed[0]) + ", " + String(timeAfterPressed[1]) + ", " + String(timeAfterPressed[2]) + ", " + String(timeAfterPressed[3]) + ", " + String(timeAfterPressed[4]);
+    //Serial.println(output);
+    for (int i = 0; i < 5; i++)
     {
-        if (analogRead(CHANGE_BUTTON) <= 2 && analogRead(CHANGE_BUTTON) != 0 && time - ChangeButtonReady >= 20)
-            ChangeButtonReady = false, inChange = !inChange, Serial.println("CHANGE BUTTON PRESSES"), ChangeButtonReady = time;
+        if (readButton[i] >= 1016 && readButton[i] <= 1019)
+        {
+            timeAfterPressed[i]++;
+        }
+        else
+        {
+            if (timeAfterPressed[i] >= 2)
+            {
+                if (i == 0)
+                    CHANGE_PRESS();
+                else if (i == 1)
+                    DOWN_PRESS();
+                else if (i == 2)
+                    UP_PRESS();
+                else if (i == 3)
+                    LEFT_PRESS();
+                else if (i == 4)
+                    RIGHT_PRESS();
+                timeAfterPressed[i] = 0;
+            }
+            else
+                timeAfterPressed[i] = 0;
+        }
     }
-    else if (analogRead(DOWN_BUTTON) <= 2 && analogRead(DOWN_BUTTON) != 0)
-    {
-        if (analogRead(DOWN_BUTTON) <= 2 && analogRead(DOWN_BUTTON) != 0 && time - DownButtonReady >= 20)
-            DownButtonReady = false, DOWN_PRESS(), DownButtonReady = time;
-    }
-    else if (analogRead(UP_BUTTON) <= 2 && analogRead(UP_BUTTON) != 0)
-    {
-        if (analogRead(UP_BUTTON) <= 2 && analogRead(UP_BUTTON) != 0 && UpButtonReady)
-            UpButtonReady = false, UP_PRESS(), UpButtonReady = time;
-    }
-    else if (analogRead(RIGHT_BUTTON) <= 2 && analogRead(RIGHT_BUTTON) != 0)
-    {
-        if (analogRead(RIGHT_BUTTON) <= 2 && analogRead(RIGHT_BUTTON) != 0 && time - RightButtonReady >= 20)
-            RightButtonReady = false, RIGHT_PRESS(), RightButtonReady = time;
-    }
-    else if (analogRead(LEFT_BUTTON) <= 2 && analogRead(LEFT_BUTTON) != 0)
-    {
-        if (analogRead(LEFT_BUTTON) <= 2 && analogRead(LEFT_BUTTON) != 0 && time - LeftButtonReady >= 20)
-            LeftButtonReady = false, LEFT_PRESS(), LeftButtonReady = time;
-    }
-    else
-        LeftButtonReady = RightButtonReady = ChangeButtonReady = UpButtonReady = DownButtonReady = time;
 }
 
 void screen_display()
@@ -169,6 +190,7 @@ void write_text()
     tft.drawText(70, 5, minute, COLOR_WHITE);
     tft.drawText(105, 5, ":", COLOR_WHITE);
     tft.drawText(115, 5, second, COLOR_WHITE);
+    // Serial.println(hour + ":" + minute + ":" + second);
     tft.setFont(Terminal11x16);
     tft.drawText(65, 50, MONTH[int(now.Month()) - 1]);
     tft.drawText(23, 50, String(now.Day()));
@@ -179,11 +201,11 @@ void write_text()
     if (!inChange)
     {
         tft.setFont(Trebuchet_MS16x21);
-        tft.drawText(15, 140, setTime(hourChange), COLOR_WHITE);
+        tft.drawText(15, 140, String(alarm[0]) + String(alarm[1]), COLOR_WHITE);
         tft.drawText(50, 140, ":", COLOR_WHITE);
-        tft.drawText(60, 140, setTime(minuteChange), COLOR_WHITE);
+        tft.drawText(60, 140, String(alarm[2]) + String(alarm[3]), COLOR_WHITE);
         tft.drawText(95, 140, ":", COLOR_WHITE);
-        tft.drawText(105, 140, setTime(secondChange), COLOR_WHITE);
+        tft.drawText(105, 140, String(alarm[4]) + String(alarm[5]), COLOR_WHITE);
         // Serial.println(setTime(hourChange) + ":" + setTime(minuteChange) + ":" + setTime(secondChange));
         tft.setFont(Terminal11x16);
         if (alarmOn)
@@ -199,7 +221,7 @@ void write_text()
             tft.drawText(140, 130, "OFF", COLOR_WHITE);
         }
         tft.setBackgroundColor(COLOR_CYAN);
-        tft.drawText(140, 150, "SET", COLOR_WHITE);
+        tft.drawText(140, 150, "SET", COLOR_BLACK);
     }
 }
 
@@ -234,7 +256,7 @@ void setup()
     Rtc.SetDateTime(currentTime);
     GetDate();
     lastSecond = second;
-    inChange = secondChange = minuteChange = hourChange = 0;
+    inChange = 0;
     pinMode(UP_BUTTON, INPUT);
     pinMode(DOWN_BUTTON, INPUT);
     pinMode(LEFT_BUTTON, INPUT);
@@ -255,3 +277,67 @@ void loop()
     // Write text
     write_text();
 }
+
+/*if (analogRead(CHANGE_BUTTON) <= 1019 && analogRead(CHANGE_BUTTON) >= 1017)
+    {
+        LeftButtonReady = RightButtonReady = UpButtonReady = DownButtonReady = time;
+        ButtonType = "CHANGE";
+    }
+    else if (analogRead(DOWN_BUTTON) <= 2 && analogRead(DOWN_BUTTON) != 0)
+    {
+        LeftButtonReady = RightButtonReady = ChangeButtonReady = UpButtonReady = time;
+        ButtonType = "DOWN";
+    }
+    else if (analogRead(UP_BUTTON) <= 2 && analogRead(UP_BUTTON) != 0)
+    {
+        LeftButtonReady = RightButtonReady = ChangeButtonReady = DownButtonReady = time;
+        ButtonType = "UP";
+    }
+    else if (analogRead(RIGHT_BUTTON) <= 2 && analogRead(RIGHT_BUTTON) != 0)
+    {
+        LeftButtonReady = ChangeButtonReady = UpButtonReady = DownButtonReady = time;
+        ButtonType = "RIGHT";
+    }
+    else if (analogRead(LEFT_BUTTON) <= 2 && analogRead(LEFT_BUTTON) != 0)
+    {
+        RightButtonReady = ChangeButtonReady = UpButtonReady = DownButtonReady = time;
+        ButtonType = "LEFT";
+    }
+    else
+    {
+        if (time - ChangeButtonReady >= 100 && ButtonType == "CHANGE")
+        {
+            inChange = !inChange;
+            Serial.println("Change Button Pressed");
+            ChangeButtonReady = time;
+            ButtonType = "NONE";
+        }
+        else if (time - LeftButtonReady >= 100 && ButtonType == "LEFT")
+        {
+            LEFT_PRESS();
+            LeftButtonReady = time;
+            ButtonType = "NONE";
+        }
+        else if (time - RightButtonReady >= 100 && ButtonType == "RIGHT")
+        {
+            RIGHT_PRESS();
+            RightButtonReady = time;
+            ButtonType = "NONE";
+        }
+        else if (time - DownButtonReady >= 100 && ButtonType == "DOWN")
+        {
+            DOWN_PRESS();
+            DownButtonReady = time;
+            ButtonType = "NONE";
+        }
+        else if (time - UpButtonReady >= 100 && ButtonType == "UP")
+        {
+            UP_PRESS();
+            UpButtonReady = time;
+            ButtonType = "NONE";
+        }
+        else
+        {
+            LeftButtonReady = RightButtonReady = ChangeButtonReady = UpButtonReady = DownButtonReady = time;
+        }
+    } */
