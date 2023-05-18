@@ -187,6 +187,18 @@ void CHANGE_PRESS()
     }
 }
 
+void drawTri(int x, int y, int size, int type)
+{
+    if (type)
+    {
+        tft.fillTriangle(x, y + size, x - size * 1.0 / 2, y - size * 1.0 / 2, x + size * 1.0 / 2, y - size * 1.0 / 2, COLOR_WHITE);
+    }
+    else
+    {
+        tft.fillTriangle(x + size, y, x - size * 1.0 / 2, y - size * 1.0 / 2, x - size * 1.0 / 2, y + size * 1.0 / 2, COLOR_WHITE);
+    }
+}
+
 void GetDate()
 {
     second = String(now.Second());
