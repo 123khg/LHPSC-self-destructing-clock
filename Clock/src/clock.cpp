@@ -38,6 +38,7 @@
 #define DOWN_BUTTON 15
 #define CHANGE_BUTTON 18
 #define SPEAKER 3
+#define MOTOR 5
 #endif
 
 #define TFT_BRIGHTNESS 100
@@ -52,10 +53,11 @@ RtcDateTime now;
 String MONTH[12] = {"JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"};
 
 // time var
-int time, changing = 0, lastChanging = 0;
+long changing = 0;
+// unsigned long long time;
 int countDown[6] = {0, 0, 0, 0, 0, 0}, alarmSet[6] = {0, 0, 0, 0, 0, 0}, alarm[6] = {0, 0, 0, 0, 0, 0};
 int alarmPointerX[8] = {5, 22, 50, 67, 95, 112, 150, 150};
-int alarmPointerY[8] = {164, 164, 164, 164, 164, 164, 120, 185};
+int alarmPointerY[8] = {164, 164, 164, 164, 164, 164, 122, 178};
 long secondTillDeath;
 String second, minute, hour, lastSecond;
 long secondCD, minuteCD, hourCD;
@@ -63,18 +65,23 @@ long secondCD, minuteCD, hourCD;
 // other var
 boolean check = false;
 boolean alarmOn = false;
-boolean lastMode = 3;
-unsigned long ButtonType = -1, timeAfterPressed[5];
+unsigned long timeAfterPressed[5];
 long mode = 3; // 0 set countdown - 1 set time - 2 start countdown - 3 alarm off
 String modeName[4] = {"Bomb countdown", "Explode at", "Detonating in", "alarm is OFF!!"};
-int modeCoords[4] = {15, 40, 20, 22};
+int modeCoords[4] = {15, 40, 20, 22}; // nos ko ddeems ngc
+int speakerSignal = 0, speakerChange = 2;
 
 void UP_PRESS()
 {
     Serial.println("UP BUTTON PRESSES");
     if (mode > 1)
         return;
-    if (changing == 6)
+
+    if (changing == 7)
+    {
+        changing = 6;
+    }
+    else if (changing == 6)
     {
         alarmOn = !alarmOn;
         tft.fillRectangle(140, 130, 180, 154, COLOR_BLACK);
@@ -104,19 +111,22 @@ void UP_PRESS()
             alarm[changing] = (alarm[changing] + 1) % 10;
     }
 }
-
 void DOWN_PRESS()
 {
-    Serial.println("DOWN BUTTON PRESSES");
+    Serial.println("DOWN BUTTON PRESSES : " + String(changing));
     if (mode > 1)
         return;
-    if (changing == 7)
+    if (changing == 6)
+    {
+        changing = 7;
+    }
+    else if (changing == 7)
     {
         if (alarmOn)
         {
-            // Set countdown
             if (mode == 0)
             {
+                Serial.println("Death mode 0");
                 for (int i = 0; i < 6; i++)
                 {
                     countDown[i] = alarm[i];
@@ -124,7 +134,6 @@ void DOWN_PRESS()
                 secondTillDeath = (countDown[0] * 10 + countDown[1]) * 3600 + (countDown[2] * 10 + countDown[3]) * 60 + (countDown[4] * 10 + countDown[5]);
             }
             else
-            // Set alarm
             {
                 for (int i = 0; i < 6; i++)
                 {
@@ -135,14 +144,16 @@ void DOWN_PRESS()
                 if (secondTillDeath < 0)
                     secondTillDeath += 3600 * 24;
             }
+            Serial.println("Set second till death to : " + String(secondTillDeath));
             mode = 2;
             tft.fillRectangle(0, 100, 176, 219, COLOR_BLACK);
         }
         else
         {
-            mode = 0;
-            tft.fillRectangle(0, 100, 176, 219, COLOR_BLACK);
+            Serial.println("Death time has been turned off!");
+            mode = 3;
         }
+        tft.fillRectangle(0, 100, 176, 219, COLOR_BLACK);
         return;
     }
 
@@ -169,31 +180,36 @@ void DOWN_PRESS()
 
 void LEFT_PRESS()
 {
+    Serial.println("LEFT BUTTON PRESSES");
     if (mode <= 1)
     {
-        changing = max(0, changing - 1);
+        if (changing >= 6)
+            changing = 5;
+        else
+            changing = max(0, changing - 1);
     }
 }
 
 void RIGHT_PRESS()
 {
+    Serial.println("RIGHT BUTTON PRESSES");
     if (mode <= 1)
     {
-        changing = min(7, changing + 1);
+        if (changing < 6)
+            changing++;
     }
 }
 
 void CHANGE_PRESS()
 {
     Serial.println("CHANGE BUTTON PRESSES : " + String(changing));
-    tft.fillRectangle(0, 100, 176, 200, COLOR_BLACK);
+    tft.fillRectangle(0, 100, 176, 219, COLOR_BLACK);
     if (mode > 1)
         mode = 0;
     else
     {
         mode = (mode + 1) % 2;
         alarmOn = true;
-        tft.fillRectangle(140, 130, 179, 180, COLOR_BLACK);
     }
 }
 
@@ -248,6 +264,10 @@ void check_button()
                 else if (i == 4)
                     RIGHT_PRESS();
                 timeAfterPressed[i] = 0;
+
+                tft.fillRectangle(0, 164, 140, 166, COLOR_BLACK);
+                tft.fillRectangle(alarmPointerX[6], alarmPointerY[6], alarmPointerX[6] + 16, alarmPointerY[6] + 2, COLOR_BLACK);
+                tft.fillRectangle(alarmPointerX[7], alarmPointerY[7], alarmPointerX[7] + 16, alarmPointerY[7] + 2, COLOR_BLACK);
             }
             else
                 timeAfterPressed[i] = 0;
@@ -277,7 +297,7 @@ void write_text()
     tft.drawText(23, 50, String(now.Day()));
     tft.drawText(115, 50, String(now.Year()));
 
-    // Alarm
+    // Alarm state
     tft.setFont(Terminal11x16);
     tft.drawText(modeCoords[mode], 100, modeName[mode], COLOR_WHITE);
 
@@ -285,15 +305,6 @@ void write_text()
     if (mode <= 1)
     {
         // Pointer
-        if (lastChanging != changing)
-        {
-            tft.fillRectangle(0, 164, 140, 166, COLOR_BLACK);
-            tft.fillRectangle(alarmPointerX[6], alarmPointerY[6], alarmPointerX[6] + 16, alarmPointerY[6] + 2, COLOR_BLACK);
-            tft.fillRectangle(alarmPointerX[7], alarmPointerY[7], alarmPointerX[7] + 16, alarmPointerY[7] + 2, COLOR_BLACK);
-
-            lastChanging = changing;
-        }
-
         tft.fillRectangle(alarmPointerX[changing], alarmPointerY[changing], alarmPointerX[changing] + 16, alarmPointerY[changing] + 2, COLOR_DARKGREEN);
 
         // 2 settings
@@ -325,7 +336,6 @@ void write_text()
     else if (mode == 2)
     {
         tft.setFont(Trebuchet_MS16x21);
-        tft.drawText(5, 140, String(alarmSet[0]) + String(alarmSet[1]), COLOR_WHITE);
         tft.drawText(40, 140, ":", COLOR_WHITE);
         tft.drawText(85, 140, ":", COLOR_WHITE);
         tft.drawText(95, 140, setTime(String(secondCD)), COLOR_WHITE);
@@ -336,33 +346,31 @@ void write_text()
 
 void update_time()
 {
-    time = millis();
+    // time = millis();
     now = Rtc.GetDateTime();
     GetDate();
-    if (lastMode == 0 && mode == 2)
-
-        if (second != lastSecond)
+    if (second != lastSecond)
+    {
+        // Real time
+        lastSecond = second;
+        tft.fillRectangle(115, 5, 176, 25, COLOR_BLACK);
+        if (second == "1")
         {
-            // Real time
-            lastSecond = second;
-            tft.fillRectangle(115, 5, 176, 25, COLOR_BLACK);
-            if (second == "1")
-            {
-                tft.fillRectangle(70, 5, 104, 25, COLOR_BLACK);
-                if (minute == "1")
-                    tft.fillRectangle(25, 5, 59, 25, COLOR_BLACK);
-            }
-            if (secondTillDeath > 0)
-                secondTillDeath--;
+            tft.fillRectangle(70, 5, 104, 25, COLOR_BLACK);
+            if (minute == "1")
+                tft.fillRectangle(25, 5, 59, 25, COLOR_BLACK);
+        }
+        if (secondTillDeath > 0)
+        {
+            secondTillDeath--;
+            long long tmp = secondTillDeath;
+            secondCD = tmp % 60;
+            tmp -= tmp % 60;
+            minuteCD = tmp % 3600 / 60;
+            tmp = (tmp - tmp % 3600 / 60) / 3600;
+            hourCD = tmp;
             if (mode == 2)
             {
-                long long tmp = secondTillDeath;
-                secondCD = tmp % 60;
-                tmp -= tmp % 60;
-                minuteCD = tmp % 3600 / 60;
-                tmp = (tmp - tmp % 3600 / 60) / 3600;
-                hourCD = tmp;
-
                 tft.fillRectangle(95, 140, 139, 160, COLOR_BLACK);
                 if (secondCD == 59)
                 {
@@ -371,7 +379,10 @@ void update_time()
                         tft.fillRectangle(5, 140, 30, 160, COLOR_BLACK);
                 }
             }
+            // Serial.println("Second till death: " + String(secondTillDeath));
+            // Serial.println(String(hourCD) + ':' + String(minuteCD) + ':' + String(secondCD));
         }
+    }
 }
 
 void setup()
@@ -392,15 +403,34 @@ void setup()
     pinMode(LEFT_BUTTON, INPUT);
     pinMode(RIGHT_BUTTON, INPUT);
     pinMode(CHANGE_BUTTON, INPUT);
+    pinMode(MOTOR, OUTPUT);
+    digitalWrite(MOTOR, HIGH);
 }
 
 void loop()
 {
-    Serial.println(String(changing) + String(alarmOn));
+    if (changing > 7 || changing < 0)
+        changing = 7;
+    tft.fillRectangle(0, 0, 20, 4, COLOR_BLACK);
+    // Serial.println(String(changing) + " " + String(alarmOn));
+
+    // Speaker
+    if ((speakerSignal + speakerChange <= 0 || speakerSignal + speakerChange >= 255))
+        speakerChange += -4 * speakerChange / abs(speakerChange);
+    // MOTOR
+    if (secondTillDeath <= 120 && alarmOn && mode == 2)
+    {
+        analogWrite(SPEAKER, speakerSignal);
+        speakerSignal += speakerChange;
+        digitalWrite(MOTOR, LOW);
+    }
+    else
+    {
+        analogWrite(SPEAKER, 0);
+        digitalWrite(MOTOR, HIGH);
+    }
     // Time & Date
     update_time();
-    // Serial.println(String(changing) + " " + String(inChange) + " " + String(alarmPointer[changing]));
-    // Serial.println(String(alarm[changing]));
     //  Button
     check_button();
 
