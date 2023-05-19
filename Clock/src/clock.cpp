@@ -54,8 +54,8 @@ String MONTH[12] = {"JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP
 // time var
 int time, changing = 0, lastChanging = 0;
 int countDown[6] = {0, 0, 0, 0, 0, 0}, alarmSet[6] = {0, 0, 0, 0, 0, 0}, alarm[6] = {0, 0, 0, 0, 0, 0};
-int alarmPointerX[7] = {5, 22, 50, 67, 95, 112, 130};
-int alarmPointerY[7] = {164, 164, 164, 164, 164, 164, 140};
+int alarmPointerX[8] = {5, 22, 50, 67, 95, 112, 150,150};
+int alarmPointerY[8] = {164, 164, 164, 164, 164, 164, 120, 185};
 long secondTillDeath;
 String second, minute, hour, lastSecond;
 long secondCD, minuteCD, hourCD;
@@ -63,25 +63,27 @@ long secondCD, minuteCD, hourCD;
 // other var
 boolean check = false;
 boolean alarmOn = false;
+boolean lastMode = 3;
 unsigned long ButtonType = -1, timeAfterPressed[5];
 long mode = 3; // 0 set countdown - 1 set time - 2 start countdown - 3 alarm off
 String modeName[4] = {"Set BOMB!!!:", "Explode at:", "Detonating in:", "alarm is OFF!!"};
 
 void UP_PRESS()
 {
-    Serial.println("UP BUTTON PRESSES");
-    if (changing == 6)
-    {
-        alarmOn = !alarmOn;
+    Serial.println("UP BUTTON PRESSES : " + String(changing));
+    if (mode > 1)
         return;
+    if (changing == 6) {
+        alarmOn = !alarmOn;
+        tft.drawText(140, 130, 170, 154, COLOR_BLACK);
     }
-    if (mode == 1)
+    else if (changing == 3 || changing == 5)
+        alarm[changing] = (alarm[changing] + 1) % 10;
+    else if (changing == 2 || changing == 4)
+        alarm[changing] = (alarm[changing] + 1) % 6;
+    else if (changing == 0)
     {
-        if (changing == 3 || changing == 5)
-            alarm[changing] = (alarm[changing] + 1) % 10;
-        else if (changing == 2 || changing == 4)
-            alarm[changing] = (alarm[changing] + 1) % 6;
-        else if (changing == 0)
+        if (mode == 1)
         {
             alarm[changing] = (alarm[changing] + 1) % 3;
             if (alarm[changing] == 2)
@@ -89,113 +91,104 @@ void UP_PRESS()
         }
         else
         {
-            if (alarm[0] == 2)
-                alarm[changing] = (alarm[changing] + 1) % 5;
-            else
-                alarm[changing] = (alarm[changing] + 1) % 10;
+            alarm[changing] = min(9, alarm[changing] + 1);
         }
     }
-    else if (changing != 6)
-        alarm[changing] = min(9, alarm[changing] + 1);
+    else
+    {
+        if (alarm[0] == 2)
+            alarm[changing] = (alarm[changing] + 1) % 5;
+        else
+            alarm[changing] = (alarm[changing] + 1) % 10;
+    }
 }
 
 void DOWN_PRESS()
 {
-    Serial.println("DOWN BUTTON PRESSES");
-    if (changing == 6)
+    Serial.println("DOWN BUTTON PRESSES : " + String(changing));
+    if (mode > 1)
+        return;
+    if (changing == 7)
     {
-        alarmOn = !alarmOn;
+        if (alarmOn)
+        {
+            if (mode == 0)
+            {
+                for (int i = 0; i < 6; i++)
+                {
+                    countDown[i] = alarm[i];
+                }
+                secondTillDeath = (countDown[0] * 10 + countDown[1]) * 3600 + (countDown[2] * 10 + countDown[3]) * 60 + (countDown[4] * 10 + countDown[5]);
+            }
+            else
+            {
+                for (int i = 0; i < 6; i++)
+                {
+                    alarmSet[i] = alarm[i];
+                }
+                secondTillDeath = (alarmSet[0] * 10 + alarmSet[1]) * 3600 + (alarmSet[2] * 10 + alarmSet[3]) * 60 + (alarmSet[4] * 10 + alarmSet[5]);
+                secondTillDeath = secondTillDeath - (hour.toInt() * 3600 + minute.toInt() * 60 + second.toInt());
+                if (secondTillDeath < 0)
+                    secondTillDeath += 3600 * 24;
+            }
+            mode = 2;
+            tft.fillRectangle(0, 100, 1 76, 219, COLOR_BLACK);
+        }
+        else {
+            mode = 0;
+            tft.fillRectangle(0, 100, 176, 219, COLOR_BLACK);
+        }
+        return;
+    } 
+    else if (mode == 0)
+    {
+        alarm[changing] = max(0, alarm[changing] - 1);
         return;
     }
-    if (mode == 1)
-    {
-        if (changing == 3 || changing == 5)
-            (alarm[changing] - 1 >= 0) ? alarm[changing]-- : alarm[changing] = 9;
-        else if (changing == 2 || changing == 4)
-            (alarm[changing] - 1 >= 0) ? alarm[changing]-- : alarm[changing] = 5;
-        else if (changing == 0)
-            (alarm[changing] - 1 >= 0) ? alarm[changing]-- : alarm[changing] = 2;
-        else
-        {
-            if (alarm[0] == 2)
-                (alarm[changing] - 1 >= 0) ? alarm[changing]-- : alarm[changing] = 4;
-            else
-                (alarm[changing] - 1 >= 0) ? alarm[changing]-- : alarm[changing] = 9;
-        }
-    }
+    if (changing == 3 || changing == 5)
+        (alarm[changing] - 1 >= 0) ? alarm[changing]-- : alarm[changing] = 9;
+    else if (changing == 2 || changing == 4)
+        (alarm[changing] - 1 >= 0) ? alarm[changing]-- : alarm[changing] = 5;
+    else if (changing == 0)
+        (alarm[changing] - 1 >= 0) ? alarm[changing]-- : alarm[changing] = 2;
     else
-        alarm[changing] = max(0, alarm[changing] - 1);
+    {
+        if (alarm[0] == 2)
+            (alarm[changing] - 1 >= 0) ? alarm[changing]-- : alarm[changing] = 4;
+        else
+            (alarm[changing] - 1 >= 0) ? alarm[changing]-- : alarm[changing] = 9;
+    }
 }
 
 void LEFT_PRESS()
 {
     Serial.println("LEFT BUTTON PRESSES");
-    changing = max(0, changing - 1);
+    if (mode <= 1) {
+        changing = max(0, changing - 1);
+    }
+        
 }
 
 void RIGHT_PRESS()
 {
     Serial.println("RIGHT BUTTON PRESSES");
-    changing = min(6, changing + 1);
+    if (mode <= 1) {
+        changing = min(7, changing + 1);
+    }
+        
 }
 
 void CHANGE_PRESS()
 {
-    Serial.println("CHANGE BUTTON PRESSES");
+    Serial.println("CHANGE BUTTON PRESSES : " + String(changing));
     tft.fillRectangle(0, 100, 176, 200, COLOR_BLACK);
-    if (mode == 0 && mode == 1 && changing == 7)
-    {
-        // when user press set
-        if (mode == 0)
-        {
-            for (int i = 0; i < 6; i++)
-            {
-                countDown[i] = alarm[i];
-            }
-            secondTillDeath = (countDown[0] * 10 + countDown[1]) * 3600 + (countDown[2] * 10 + countDown[3]) * 60 + (countDown[4] * 10 + countDown[5]);
-        }
-        else
-        {
-            for (int i = 0; i < 6; i++)
-            {
-                alarmSet[i] = alarm[i];
-            }
-            secondTillDeath = (alarmSet[0] * 10 + alarmSet[1]) * 3600 + (alarmSet[2] * 10 + alarmSet[3]) * 60 + (alarmSet[4] * 10 + alarmSet[5]);
-            secondTillDeath = secondTillDeath - (hour.toInt() * 3600 + minute.toInt() * 60 + second.toInt());
-            if (secondTillDeath < 0)
-                secondTillDeath += 3600 * 24;
-        }
-        mode = 2;
-    }
+    if (mode > 1)
+        mode = 0;
     else
     {
-        mode = (mode + 1) % 3;
-        if (mode == 0)
-        {
-            for (int i = 0; i < 6; i++)
-            {
-                alarm[i] = countDown[i];
-            }
-        }
-        else if (mode == 1)
-        {
-            for (int i = 0; i < 6; i++)
-            {
-                alarm[i] = alarmSet[i];
-            }
-        }
-    }
-}
-
-void drawTri(int x, int y, int size, int type)
-{
-    if (type)
-    {
-        tft.fillTriangle(x, y + size, x - size * 1.0 / 2, y - size * 1.0 / 2, x + size * 1.0 / 2, y - size * 1.0 / 2, COLOR_WHITE);
-    }
-    else
-    {
-        tft.fillTriangle(x + size, y, x - size * 1.0 / 2, y - size * 1.0 / 2, x - size * 1.0 / 2, y + size * 1.0 / 2, COLOR_WHITE);
+        mode = (mode + 1) % 2;
+        alarmOn = true;
+        tft.fillRectangle(140, 130, 179, 180, COLOR_BLACK);
     }
 }
 
@@ -290,6 +283,9 @@ void write_text()
         if (lastChanging != changing)
         {
             tft.fillRectangle(0, 164, 140, 166, COLOR_BLACK);
+            tft.fillRectangle(alarmPointerX[6], alarmPointerY[6], alarmPointerX[6] + 16, alarmPointerY[6] + 2, COLOR_BLACK);
+            tft.fillRectangle(alarmPointerX[7], alarmPointerY[7], alarmPointerX[7] + 16, alarmPointerY[7] + 2, COLOR_BLACK);
+
             lastChanging = changing;
         }
 
@@ -314,13 +310,14 @@ void write_text()
         tft.drawText(140, 155, "SET", COLOR_WHITE);
 
         tft.setFont(Trebuchet_MS16x21);
+        tft.setBackgroundColor(COLOR_BLACK);
         tft.drawText(5, 140, String(alarm[0]) + String(alarm[1]), COLOR_WHITE);
         tft.drawText(40, 140, ":", COLOR_WHITE);
         tft.drawText(50, 140, String(alarm[2]) + String(alarm[3]), COLOR_WHITE);
         tft.drawText(85, 140, ":", COLOR_WHITE);
         tft.drawText(95, 140, String(alarm[4]) + String(alarm[5]), COLOR_WHITE);
     }
-    else if (mode == 3)
+    else if (mode == 2)
     {
         tft.setFont(Trebuchet_MS16x21);
         tft.drawText(5, 140, String(alarmSet[0]) + String(alarmSet[1]), COLOR_WHITE);
@@ -337,36 +334,39 @@ void update_time()
     time = millis();
     now = Rtc.GetDateTime();
     GetDate();
-    if (second != lastSecond)
-    {
-        // Real time
-        lastSecond = second;
-        tft.fillRectangle(115, 5, 176, 25, COLOR_BLACK);
-        if (second == "1")
-        {
-            tft.fillRectangle(70, 5, 104, 25, COLOR_BLACK);
-            if (minute == "1")
-                tft.fillRectangle(25, 5, 59, 25, COLOR_BLACK);
-        }
-        secondTillDeath--;
-        if (mode == 3)
-        {
-            long long tmp = secondTillDeath;
-            secondCD = tmp % 60;
-            tmp -= tmp % 60;
-            minuteCD = tmp % 3600 / 60;
-            tmp = (tmp - tmp % 3600 / 60) / 3600;
-            hourCD = tmp;
+    if (lastMode == 0 && mode == 2)
 
-            tft.fillRectangle(95, 140, 139, 160, COLOR_BLACK);
-            if (secondCD == 59)
+        if (second != lastSecond)
+        {
+            // Real time
+            lastSecond = second;
+            tft.fillRectangle(115, 5, 176, 25, COLOR_BLACK);
+            if (second == "1")
             {
-                tft.fillRectangle(50, 140, 80, 160, COLOR_BLACK);
-                if (minuteCD == 59)
-                    tft.fillRectangle(5, 140, 30, 160, COLOR_BLACK);
+                tft.fillRectangle(70, 5, 104, 25, COLOR_BLACK);
+                if (minute == "1")
+                    tft.fillRectangle(25, 5, 59, 25, COLOR_BLACK);
+            }
+            if (secondTillDeath > 0)
+                secondTillDeath--;
+            if (mode == 2)
+            {
+                long long tmp = secondTillDeath;
+                secondCD = tmp % 60;
+                tmp -= tmp % 60;
+                minuteCD = tmp % 3600 / 60;
+                tmp = (tmp - tmp % 3600 / 60) / 3600;
+                hourCD = tmp;
+
+                tft.fillRectangle(95, 140, 139, 160, COLOR_BLACK);
+                if (secondCD == 59)
+                {
+                    tft.fillRectangle(50, 140, 80, 160, COLOR_BLACK);
+                    if (minuteCD == 59)
+                        tft.fillRectangle(5, 140, 30, 160, COLOR_BLACK);
+                }
             }
         }
-    }
 }
 
 void setup()
