@@ -63,7 +63,6 @@ long secondCD, minuteCD, hourCD;
 // other var
 boolean check = false;
 boolean alarmOn = false;
-boolean lastMode = 3;
 unsigned long ButtonType = -1, timeAfterPressed[5];
 long mode = 3; // 0 set countdown - 1 set time - 2 start countdown - 3 alarm off
 String modeName[4] = {"Set BOMB!!!:", "Explode at:", "Detonating in:", "alarm is OFF!!"};
@@ -73,7 +72,11 @@ void UP_PRESS()
     Serial.println("UP BUTTON PRESSES : " + String(changing));
     if (mode > 1)
         return;
-    if (changing == 6) {
+
+    if (changing == 7) {
+        changing = 6;
+    }
+    else if (changing == 6) {
         alarmOn = !alarmOn;
         tft.drawText(140, 130, 170, 154, COLOR_BLACK);
     }
@@ -108,10 +111,14 @@ void DOWN_PRESS()
     Serial.println("DOWN BUTTON PRESSES : " + String(changing));
     if (mode > 1)
         return;
-    if (changing == 7)
+    if (changing == 6) {
+        changing = 7;
+    }
+    else if (changing == 7)
     {
         if (alarmOn)
         {
+            Serial.pintln("Death time has been confirmed!!");
             if (mode == 0)
             {
                 for (int i = 0; i < 6; i++)
@@ -132,12 +139,12 @@ void DOWN_PRESS()
                     secondTillDeath += 3600 * 24;
             }
             mode = 2;
-            tft.fillRectangle(0, 100, 1 76, 219, COLOR_BLACK);
         }
         else {
+            Serial.pintln("Death time has been turned off!");
             mode = 0;
-            tft.fillRectangle(0, 100, 176, 219, COLOR_BLACK);
         }
+        tft.fillRectangle(0, 100, 176, 219, COLOR_BLACK);
         return;
     } 
     else if (mode == 0)
@@ -164,7 +171,8 @@ void LEFT_PRESS()
 {
     Serial.println("LEFT BUTTON PRESSES");
     if (mode <= 1) {
-        changing = max(0, changing - 1);
+        if (changing >= 6) changing = 5;
+        else changing = max(0, changing - 1);
     }
         
 }
@@ -173,7 +181,7 @@ void RIGHT_PRESS()
 {
     Serial.println("RIGHT BUTTON PRESSES");
     if (mode <= 1) {
-        changing = min(7, changing + 1);
+        if (changing < 6) changing = min(7, changing + 1);
     }
         
 }
@@ -272,7 +280,7 @@ void write_text()
     tft.drawText(23, 50, String(now.Day()));
     tft.drawText(115, 50, String(now.Year()));
 
-    // Alarm
+    // Alarm state
     tft.setFont(Terminal11x16);
     tft.drawText(15, 100, modeName[mode], COLOR_WHITE);
 
@@ -334,30 +342,27 @@ void update_time()
     time = millis();
     now = Rtc.GetDateTime();
     GetDate();
-    if (lastMode == 0 && mode == 2)
-
-        if (second != lastSecond)
+    if (second != lastSecond)
+    {
+        // Real time
+        lastSecond = second;
+        tft.fillRectangle(115, 5, 176, 25, COLOR_BLACK);
+        if (second == "1")
         {
-            // Real time
-            lastSecond = second;
-            tft.fillRectangle(115, 5, 176, 25, COLOR_BLACK);
-            if (second == "1")
-            {
-                tft.fillRectangle(70, 5, 104, 25, COLOR_BLACK);
-                if (minute == "1")
-                    tft.fillRectangle(25, 5, 59, 25, COLOR_BLACK);
-            }
-            if (secondTillDeath > 0)
-                secondTillDeath--;
+            tft.fillRectangle(70, 5, 104, 25, COLOR_BLACK);
+            if (minute == "1")
+                tft.fillRectangle(25, 5, 59, 25, COLOR_BLACK);
+        }
+        if (secondTillDeath > 0) {
+            secondTillDeath--;
+            long long tmp = secondTillDeath;
+            secondCD = tmp % 60;
+            tmp -= tmp % 60;
+            minuteCD = tmp % 3600 / 60;
+            tmp = (tmp - tmp % 3600 / 60) / 3600;
+            hourCD = tmp;
             if (mode == 2)
             {
-                long long tmp = secondTillDeath;
-                secondCD = tmp % 60;
-                tmp -= tmp % 60;
-                minuteCD = tmp % 3600 / 60;
-                tmp = (tmp - tmp % 3600 / 60) / 3600;
-                hourCD = tmp;
-
                 tft.fillRectangle(95, 140, 139, 160, COLOR_BLACK);
                 if (secondCD == 59)
                 {
@@ -367,6 +372,7 @@ void update_time()
                 }
             }
         }
+    }
 }
 
 void setup()
@@ -393,8 +399,6 @@ void loop()
 {
     // Time & Date
     update_time();
-    // Serial.println(String(changing) + " " + String(inChange) + " " + String(alarmPointer[changing]));
-    // Serial.println(String(alarm[changing]));
     //  Button
     check_button();
 
