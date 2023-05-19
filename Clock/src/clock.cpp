@@ -54,7 +54,7 @@ String MONTH[12] = {"JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP
 // time var
 int time, changing = 0, lastChanging = 0;
 int countDown[6] = {0, 0, 0, 0, 0, 0}, alarmSet[6] = {0, 0, 0, 0, 0, 0}, alarm[6] = {0, 0, 0, 0, 0, 0};
-int alarmPointerX[8] = {5, 22, 50, 67, 95, 112, 150,150};
+int alarmPointerX[8] = {5, 22, 50, 67, 95, 112, 150, 150};
 int alarmPointerY[8] = {164, 164, 164, 164, 164, 164, 120, 185};
 long secondTillDeath;
 String second, minute, hour, lastSecond;
@@ -66,16 +66,18 @@ boolean alarmOn = false;
 boolean lastMode = 3;
 unsigned long ButtonType = -1, timeAfterPressed[5];
 long mode = 3; // 0 set countdown - 1 set time - 2 start countdown - 3 alarm off
-String modeName[4] = {"Set BOMB!!!:", "Explode at:", "Detonating in:", "alarm is OFF!!"};
+String modeName[4] = {"Bomb countdown", "Explode at", "Detonating in", "alarm is OFF!!"};
+int modeCoords[4] = {15, 40, 20, 22};
 
 void UP_PRESS()
 {
-    Serial.println("UP BUTTON PRESSES : " + String(changing));
+    Serial.println("UP BUTTON PRESSES");
     if (mode > 1)
         return;
-    if (changing == 6) {
+    if (changing == 6)
+    {
         alarmOn = !alarmOn;
-        tft.drawText(140, 130, 170, 154, COLOR_BLACK);
+        tft.fillRectangle(140, 130, 180, 154, COLOR_BLACK);
     }
     else if (changing == 3 || changing == 5)
         alarm[changing] = (alarm[changing] + 1) % 10;
@@ -105,13 +107,14 @@ void UP_PRESS()
 
 void DOWN_PRESS()
 {
-    Serial.println("DOWN BUTTON PRESSES : " + String(changing));
+    Serial.println("DOWN BUTTON PRESSES");
     if (mode > 1)
         return;
     if (changing == 7)
     {
         if (alarmOn)
         {
+            // Set countdown
             if (mode == 0)
             {
                 for (int i = 0; i < 6; i++)
@@ -121,6 +124,7 @@ void DOWN_PRESS()
                 secondTillDeath = (countDown[0] * 10 + countDown[1]) * 3600 + (countDown[2] * 10 + countDown[3]) * 60 + (countDown[4] * 10 + countDown[5]);
             }
             else
+            // Set alarm
             {
                 for (int i = 0; i < 6; i++)
                 {
@@ -132,14 +136,17 @@ void DOWN_PRESS()
                     secondTillDeath += 3600 * 24;
             }
             mode = 2;
-            tft.fillRectangle(0, 100, 1 76, 219, COLOR_BLACK);
+            tft.fillRectangle(0, 100, 176, 219, COLOR_BLACK);
         }
-        else {
+        else
+        {
             mode = 0;
             tft.fillRectangle(0, 100, 176, 219, COLOR_BLACK);
         }
         return;
-    } 
+    }
+
+    // Set Digits value
     else if (mode == 0)
     {
         alarm[changing] = max(0, alarm[changing] - 1);
@@ -162,20 +169,18 @@ void DOWN_PRESS()
 
 void LEFT_PRESS()
 {
-    Serial.println("LEFT BUTTON PRESSES");
-    if (mode <= 1) {
+    if (mode <= 1)
+    {
         changing = max(0, changing - 1);
     }
-        
 }
 
 void RIGHT_PRESS()
 {
-    Serial.println("RIGHT BUTTON PRESSES");
-    if (mode <= 1) {
+    if (mode <= 1)
+    {
         changing = min(7, changing + 1);
     }
-        
 }
 
 void CHANGE_PRESS()
@@ -274,7 +279,7 @@ void write_text()
 
     // Alarm
     tft.setFont(Terminal11x16);
-    tft.drawText(15, 100, modeName[mode], COLOR_WHITE);
+    tft.drawText(modeCoords[mode], 100, modeName[mode], COLOR_WHITE);
 
     // Alarm time
     if (mode <= 1)
@@ -391,6 +396,7 @@ void setup()
 
 void loop()
 {
+    Serial.println(String(changing) + String(alarmOn));
     // Time & Date
     update_time();
     // Serial.println(String(changing) + " " + String(inChange) + " " + String(alarmPointer[changing]));
