@@ -55,7 +55,7 @@ String MONTH[12] = {"JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP
 // time var
 long changing = 0;
 // unsigned long long time;
-int countDown[6] = {0, 0, 0, 0, 0, 0}, alarmSet[6] = {0, 0, 0, 0, 0, 0}, alarm[6] = {0, 0, 0, 0, 0, 0};
+long countDown[6] = {0, 0, 0, 0, 0, 0}, alarmSet[6] = {0, 0, 0, 0, 0, 0}, alarm[6] = {0, 0, 0, 0, 0, 0};
 int alarmPointerX[8] = {5, 22, 50, 67, 95, 112, 150, 150};
 int alarmPointerY[8] = {164, 164, 164, 164, 164, 164, 122, 178};
 long secondTillDeath;
@@ -68,8 +68,7 @@ boolean alarmOn = false;
 unsigned long timeAfterPressed[5];
 long mode = 3; // 0 set countdown - 1 set time - 2 start countdown - 3 alarm off
 String modeName[4] = {"Bomb countdown", "Explode at", "Detonating in", "alarm is OFF!!"};
-int modeCoords[4] = {15, 40, 20, 22}; // nos ko ddeems ngc
-int speakerSignal = 0, speakerChange = 2;
+int modeCoords[4] = {15, 40, 20, 22};
 
 void UP_PRESS()
 {
@@ -124,7 +123,8 @@ void DOWN_PRESS()
     {
         if (alarmOn)
         {
-            if (mode == 0)
+            secondTillDeath = 0;
+            if (mode == 0) // Countdown
             {
                 Serial.println("Death mode 0");
                 for (int i = 0; i < 6; i++)
@@ -133,18 +133,19 @@ void DOWN_PRESS()
                 }
                 secondTillDeath = (countDown[0] * 10 + countDown[1]) * 3600 + (countDown[2] * 10 + countDown[3]) * 60 + (countDown[4] * 10 + countDown[5]);
             }
-            else
+            else // Set alarm
             {
                 for (int i = 0; i < 6; i++)
                 {
                     alarmSet[i] = alarm[i];
                 }
-                secondTillDeath = (alarmSet[0] * 10 + alarmSet[1]) * 3600 + (alarmSet[2] * 10 + alarmSet[3]) * 60 + (alarmSet[4] * 10 + alarmSet[5]);
-                secondTillDeath = secondTillDeath - (hour.toInt() * 3600 + minute.toInt() * 60 + second.toInt());
+                secondTillDeath = (long)(alarmSet[0] * 10 + alarmSet[1]) * 3600 + (alarmSet[2] * 10 + alarmSet[3]) * 60 + (alarmSet[4] * 10 + alarmSet[5]);
+                // Serial.println("Second till death at first " + String(secondTillDeath) + " second now: " + String(hour.toInt() * 3600 + minute.toInt() * 60 + second.toInt()));
+                secondTillDeath -= (long)(hour.toInt() * 3600 + minute.toInt() * 60 + second.toInt());
                 if (secondTillDeath < 0)
-                    secondTillDeath += 3600 * 24;
+                    secondTillDeath += (long)3600 * 24;
             }
-            Serial.println("Set second till death to : " + String(secondTillDeath));
+            // Serial.println("Set second till death to : " + String(secondTillDeath));
             mode = 2;
             tft.fillRectangle(0, 100, 176, 219, COLOR_BLACK);
         }
@@ -209,7 +210,16 @@ void CHANGE_PRESS()
     else
     {
         mode = (mode + 1) % 2;
-        alarmOn = true;
+        if (mode == 0)
+        {
+            for (int i = 0; i < 6; i++)
+                alarm[i] = countDown[i];
+        }
+        else
+        {
+            for (int i = 0; i < 6; i++)
+                alarm[i] = alarmSet[i];
+        }
     }
 }
 
@@ -394,8 +404,8 @@ void setup()
     pinMode(LED_BUILTIN, OUTPUT);
 
     Rtc.Begin();
-    RtcDateTime currentTime = RtcDateTime(__DATE__, __TIME__);
-    Rtc.SetDateTime(currentTime);
+    // RtcDateTime currentTime = RtcDateTime(__DATE__, __TIME__);
+    // Rtc.SetDateTime(currentTime);
     GetDate();
     lastSecond = second;
     pinMode(UP_BUTTON, INPUT);
@@ -414,19 +424,14 @@ void loop()
     tft.fillRectangle(0, 0, 20, 4, COLOR_BLACK);
     // Serial.println(String(changing) + " " + String(alarmOn));
 
-    // Speaker
-    if ((speakerSignal + speakerChange <= 0 || speakerSignal + speakerChange >= 255))
-        speakerChange += -4 * speakerChange / abs(speakerChange);
-    // MOTOR
-    if (secondTillDeath <= 120 && alarmOn && mode == 2)
+    // MOTOR + SPEAKER
+    if (secondTillDeath <= 60 && alarmOn && mode == 2)
     {
-        analogWrite(SPEAKER, speakerSignal);
-        speakerSignal += speakerChange;
+        tone(SPEAKER, 2600, 20);
         digitalWrite(MOTOR, LOW);
     }
     else
     {
-        analogWrite(SPEAKER, 0);
         digitalWrite(MOTOR, HIGH);
     }
     // Time & Date
