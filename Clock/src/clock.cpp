@@ -76,6 +76,7 @@ void UP_PRESS()
     if (mode > 1)
         return;
 
+    // Configuration
     if (changing == 7)
     {
         changing = 6;
@@ -85,6 +86,8 @@ void UP_PRESS()
         alarmOn = !alarmOn;
         tft.fillRectangle(140, 130, 180, 154, COLOR_BLACK);
     }
+
+    // Normal alarm digit
     else if (changing == 3 || changing == 5)
         alarm[changing] = (alarm[changing] + 1) % 10;
     else if (changing == 2 || changing == 4)
@@ -94,18 +97,20 @@ void UP_PRESS()
         if (mode == 1)
         {
             alarm[changing] = (alarm[changing] + 1) % 3;
-            if (alarm[changing] == 2)
-                alarm[changing + 1] = min(4, alarm[changing + 1]);
         }
         else
         {
-            alarm[changing] = min(9, alarm[changing] + 1);
+            alarm[changing] = (alarm[changing] + 1) % 10;
         }
     }
     else
     {
-        if (alarm[0] == 2)
+        if (mode == 1 && alarm[0] == 2)
+        {
             alarm[changing] = (alarm[changing] + 1) % 5;
+            if (alarm[1] > 4)
+                alarm[1] = 4;
+        }
         else
             alarm[changing] = (alarm[changing] + 1) % 10;
     }
@@ -158,24 +163,35 @@ void DOWN_PRESS()
         return;
     }
 
-    // Set Digits value
-    else if (mode == 0)
-    {
-        alarm[changing] = max(0, alarm[changing] - 1);
-        return;
-    }
-    if (changing == 3 || changing == 5)
+    // Normal alarm digit
+    else if (changing == 3 || changing == 5)
         (alarm[changing] - 1 >= 0) ? alarm[changing]-- : alarm[changing] = 9;
     else if (changing == 2 || changing == 4)
         (alarm[changing] - 1 >= 0) ? alarm[changing]-- : alarm[changing] = 5;
     else if (changing == 0)
-        (alarm[changing] - 1 >= 0) ? alarm[changing]-- : alarm[changing] = 2;
+    {
+        if (mode == 1)
+        {
+            (alarm[changing] - 1 >= 0) ? alarm[changing]-- : alarm[changing] = 2;
+        }
+        else
+        {
+            (alarm[changing] - 1 >= 0) ? alarm[changing]-- : alarm[changing] = 9;
+        }
+    }
     else
     {
-        if (alarm[0] == 2)
-            (alarm[changing] - 1 >= 0) ? alarm[changing]-- : alarm[changing] = 4;
+        if (mode == 1)
+        {
+            if (alarm[0] == 2)
+                (alarm[changing] - 1 >= 0) ? alarm[changing]-- : alarm[changing] = 4;
+            else
+                (alarm[changing] - 1 >= 0) ? alarm[changing]-- : alarm[changing] = 9;
+        }
         else
+        {
             (alarm[changing] - 1 >= 0) ? alarm[changing]-- : alarm[changing] = 9;
+        }
     }
 }
 
@@ -399,7 +415,7 @@ void setup()
 {
     tft.begin();
     tft.clear();
-    tft.setOrientation(0);
+    tft.setOrientation(2);
     Serial.begin(9600);
     pinMode(LED_BUILTIN, OUTPUT);
 
